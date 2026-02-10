@@ -13,7 +13,6 @@ namespace TilemapScripts
         [SerializeField] private string _animationJump;
         [SerializeField] private string _animationWalk;
         private PlayerMovment _playerMovment;
-
         private void Awake()
         {
             _playerMovment = new PlayerMovment();
@@ -22,12 +21,10 @@ namespace TilemapScripts
         {
             _playerMovment.Enable();
         }
-
         private void OnDisable()
         {
             _playerMovment.Disable();
         }
-
         private void Start()
         {
             _playerMovment.Tilemap.Jump.performed += context => Jump();
@@ -38,7 +35,6 @@ namespace TilemapScripts
             Animations();
             Move(mov);
         }
-
         private void Animations()
         {
             if (_rigidbody.linearVelocity.x == 0 && _animator.GetBool(_animationWalk))
@@ -51,7 +47,6 @@ namespace TilemapScripts
                 _animator.SetBool(_animationWalk, true);
             }
         }
-
         private void OnTriggerEnter2D(Collider2D other)
         {
             _animator.SetBool(_animationJump, false);
@@ -68,9 +63,7 @@ namespace TilemapScripts
         }
         private void Jump()
         {
-            
             _rigidbody.linearVelocity = new Vector2(_rigidbody.linearVelocity.x, _jumpForce);
         }
-        
     }
 }
