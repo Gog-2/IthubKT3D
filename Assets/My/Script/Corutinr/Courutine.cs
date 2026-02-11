@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Threading;
 using Cysharp.Threading.Tasks;
 using TMPro;
 using UnityEngine;
@@ -9,60 +10,85 @@ namespace Corutinrs
     {
         [Header("Sprech Settings")]
         [SerializeField] private float _typeSpeed;
-        [SerializeField] private SO_DialogueSorter _dialogueSorter;
+        [SerializeField] private SO_Dialogue[] _dialogues;
         [SerializeField] private int _textQueue;
         [Header("Loaded dialog")]
         [SerializeField] private int _dialogeLoadedOn;
         [SerializeField] private bool _pause;
         [Header("Setup")]
         [SerializeField] private TMP_Text _text1;
-
+        private CancellationTokenSource _cts;
+        private bool _isTyping; 
         private string activeDialoge;
 
         private void Start()
         {
-            activeDialoge = $"{_dialogueSorter.dialogues[0].Name}\n{_dialogueSorter.dialogues[0].Dialogue}";
+            NewDialogue();
         }
 
-        private void Dialog()
+        public void StartDialog()
         {
             if (_text1.text == activeDialoge)
             {
-                _textQueue++;
-                activeDialoge = $"{_dialogueSorter.dialogues[_textQueue].Name}\n{_dialogueSorter.dialogues[_textQueue].Dialogue}";
-                CourutineTextWrite().Forget();
+                NewDialogue();
             }
             else SkipDialogue();
         }
-        
-        private async UniTask CourutineTextWrite()
+
+        private void NewDialogue()
         {
+            StopCurrentTyping();
+            _textQueue++;
+            _dialogeLoadedOn = 0;
+            activeDialoge = $"{_dialogues[_textQueue - 1].Name}\n{_dialogues[_textQueue - 1].Dialogue}";
+            _cts = new CancellationTokenSource();
+            CourutineTextWrite(_cts.Token).Forget();  
+        }
+        
+        private async UniTask CourutineTextWrite(CancellationToken ct)
+        {
+            _isTyping = true;
             if (_dialogeLoadedOn == 0) _text1.text = "";
             for (int i = _dialogeLoadedOn; i < activeDialoge.Length; i++)
             {
+                ct.ThrowIfCancellationRequested();
                 _text1.text += activeDialoge[i];
-                _dialogeLoadedOn = i;
-                await UniTask.WaitForSeconds(_typeSpeed);
+                _dialogeLoadedOn = i + 1;
+                await UniTask.WaitForSeconds(_typeSpeed, cancellationToken: ct);
             }
+            _isTyping = false;
         }
 
         private void SkipDialogue()
         {
+            StopCurrentTyping();
             _text1.text = activeDialoge;
-            _dialogeLoadedOn = activeDialoge.Length;
+            _dialogeLoadedOn = _text1.text.Length;
+        }
+        private void StopCurrentTyping()
+        {
+            _cts?.Cancel();
+            _cts?.Dispose();
+            _cts = null;
         }
 
-        private void DialogueResume()
+        public void DialoguePause()
         {
             if (_pause)
             { 
                 _pause = false;
-                  
+                _cts = new CancellationTokenSource();
+                CourutineTextWrite(_cts.Token).Forget();
             }
             else
             {
-                _pause = true;  
+                _pause = true;
+                StopCurrentTyping();
             }
+        }
+        private void OnDestroy()
+        {
+            StopCurrentTyping();
         }
     }
 }
