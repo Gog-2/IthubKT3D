@@ -1,7 +1,7 @@
 using My.Script._3D;
 using UnityEngine;
 
-public class Movement3D : MonoBehaviour, CanBeActiveted
+public class Movement3D : MonoBehaviour, ICanBeActiveted
 {
     [Header("Movement Settings")]
     [SerializeField] private float _moveSpeed = 5;
@@ -32,13 +32,15 @@ public class Movement3D : MonoBehaviour, CanBeActiveted
     [SerializeField] private float _maxFOV = 60f;
     [SerializeField] private Camera _camComponent;
     private float _targetFOV;
+    [Header("Push Settings")]
+    [SerializeField] private float _pushPower = 3f;
+    [SerializeField] private float _pushYOffset = 0.5f;
 
     void Awake()
     {
         _playerMovment = new PlayerMovment();
         _targetFOV = _camComponent.fieldOfView;
         _playerMovment.Player.Jump.performed += context => OnJump();
-        _playerMovment.Vehicle.Exit.performed += context => SwitchToPlayerControls();
     }
 
     void Start()
@@ -64,6 +66,18 @@ public class Movement3D : MonoBehaviour, CanBeActiveted
         
         if (_jumpBufferCounter > 0f)
             _jumpBufferCounter -= Time.deltaTime;
+    }
+    private void OnControllerColliderHit(ControllerColliderHit hit)
+    {
+        Rigidbody rb = hit.collider.attachedRigidbody;
+        
+        if (rb == null || rb.isKinematic) return;
+
+        if (hit.moveDirection.y < -0.3f) return;
+        
+        Vector3 pushDir = new Vector3(hit.moveDirection.x, _pushYOffset, hit.moveDirection.z);
+
+        rb.AddForce(pushDir * _pushPower, ForceMode.Impulse);
     }
 
     private void FixedUpdate()

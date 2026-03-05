@@ -1,6 +1,6 @@
 namespace My.Script._3D
 {
-    public interface CanBeActiveted
+    public interface ICanBeActiveted
     {
         public int Layer { get; set; }
     }

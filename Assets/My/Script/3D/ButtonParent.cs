@@ -6,18 +6,17 @@ public abstract class ButtonParent : MonoBehaviour
     
     protected virtual void OnTriggerEnter(Collider other)
     {
-        CanBeActiveted _canBeActiveted = other.GetComponent<CanBeActiveted>();
+        ICanBeActiveted _canBeActiveted = other.GetComponent<ICanBeActiveted>();
         if (_canBeActiveted != null) TriggerEnter();
     }
 
     protected virtual void OnTriggerExit(Collider other)
     {
-        CanBeActiveted _canBeActiveted = other.GetComponent<CanBeActiveted>();
+        ICanBeActiveted _canBeActiveted = other.GetComponent<ICanBeActiveted>();
         if (_canBeActiveted != null) TriggerExit();
     }
 
     protected abstract void TriggerEnter();
 
-    protected abstract void TriggerExit();
-
+    protected virtual void TriggerExit() { }
 }
