@@ -1,12 +1,13 @@
-using UnityEngine;
 
-public class EnemyData 
+[System.Serializable]
+public struct EnemyData 
 {
+    public TransformData Transform;
+    public SpriteRenderData Sprite;
+
     public EnemyData(TransformData transform, SpriteRenderData spriteRenderer)
     {
         Transform = transform;
         Sprite = spriteRenderer;
     }
-    public readonly TransformData Transform;
-    public readonly SpriteRenderData Sprite;
 }

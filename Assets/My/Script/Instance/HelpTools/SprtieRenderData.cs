@@ -1,4 +1,5 @@
-public class SprtieRenderData
+[System.Serializable]
+public struct SpriteRenderData
 {
    public float r;
    public float g;

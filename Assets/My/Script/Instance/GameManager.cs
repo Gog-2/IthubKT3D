@@ -1,8 +1,10 @@
 using System.Collections.Generic;
 using System.IO;
+using Cysharp.Threading.Tasks;
 using Newtonsoft.Json;
 using UnityEngine;
 using UnityEngine.Audio;
+using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
@@ -16,13 +18,15 @@ public class GameManager : MonoBehaviour
 {
     public static GameManager instance;
     private AudioSource[] _audioSource = new AudioSource[2];
-    private Enemy[] _enemy;
+    [SerializeField]private List<Enemy> _enemy;
     private List<EnemyData> _enemyData;
     private bool _reloadingScene = true;
-    private bool _isLoading = false;
+    private bool _dataLoaded = false;
     [SerializeField]private Slider  _slider;
     [SerializeField]private AudioMixer _audioMixer;
-    private EnemyData[] _loadedEnemies;
+    private TotalData _totalData;
+    private SliderChanger _sliderChanger;
+    string jsonPath = Application.dataPath + "/Resources/Instance.json";
     private void Awake()
     {
         if (instance == null) instance = this;
@@ -32,7 +36,6 @@ public class GameManager : MonoBehaviour
             return;
         }
         DontDestroyOnLoad(gameObject);
-        LoadData();
     }
     private void Update()
     {
@@ -41,21 +44,7 @@ public class GameManager : MonoBehaviour
             SceneReload();
         }
     }
-
-    private void LoadDataFromJson()
-    {
-        _isLoading = true;
-        string jsonPath = Application.dataPath + "/Resources/Instance.json";
-        if (!File.Exists(jsonPath))return;
-        _isLoading = true;
-        using (StreamReader reader = new StreamReader(jsonPath))
-        {
-            string json = reader.ReadToEnd();
-            _loadedEnemies = JsonConvert.DeserializeObject<EnemyData[]>(json);
-            
-        }
-        _isLoading = false; 
-    }
+    
 
     public void AudioSourceConnect(AudioSource audioSource, AudioType audioType)
     {
@@ -92,31 +81,117 @@ public class GameManager : MonoBehaviour
     private void SceneReload()
     {
         _reloadingScene = true;
-        ParseInfoToData();
+        _dataLoaded = false; 
+        SaveDataToJson();
+        _enemy.Clear();
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
-
-    private void ParseInfoToData()
-    {
-        if (_reloadingScene) return;
-        foreach (Enemy enemy in _enemy)
-        {
-            EnemyData enemyToList = new EnemyData (
-                ObjectDataConvector.TransformToTransformData(enemy.EnemyTransform),
-                ObjectDataConvector.GetSpriteRenderer(enemy.SpriteRendererChange)
-                );
-            _enemyData.Add(enemyToList);
-        }
-    }
-    public void LoadData()
+    public void WakeOnLoad()
     {
         if (!_reloadingScene) return;
         _reloadingScene = false;
-        for (int i = 0; i < _enemyData.Count; i++)
+        WaitToLoad().Forget();
+    }
+
+    private async UniTask WaitToLoad()
+    {
+        if (File.Exists(jsonPath))
         {
-            ObjectDataConvector.ApplyTransformData(_enemyData[i].Transform,ref _enemy[i].EnemyTransform);
-            ObjectDataConvector.ApplySpriteRenderer(_enemyData[i].Sprite,ref _enemy[i].SpriteRendererChange);
+            string json = File.ReadAllText(jsonPath);
+            _totalData = JsonConvert.DeserializeObject<TotalData>(json);
         }
+
+        int expectedEnemies = _totalData?.Enemies?.Count ?? 0;
+        
+        while (_enemy.Count < expectedEnemies)
+        {
+            await UniTask.Yield();
+        }
+
+        if (_dataLoaded) return;
+        _dataLoaded = true;
+        
+        ExecuteLoadLogic();
+    }
+
+    private void ExecuteLoadLogic()
+    {
+        if (_totalData == null) return;
+
+        for (int i = 0; i < _totalData.Enemies.Count; i++)
+        {
+            if (i >= _enemy.Count) break; 
+        
+            ObjectDataConvector.ApplyTransformData(_totalData.Enemies[i].Transform, _enemy[i].EnemyTransform);
+            ObjectDataConvector.ApplySpriteRenderer(_totalData.Enemies[i].Sprite, _enemy[i].SpriteRendererChange);
+        }
+    
+        if (_slider != null) _slider.value = _totalData.volumeData.Volume;
+    }
+    public float GetSavedVolume()
+    {
+        if (_totalData != null && _totalData.volumeData != null)
+        {
+            return _totalData.volumeData.Volume;
+        }
+        return 0f;
+    }
+
+    
+    private void SaveDataToJson()
+    {
+        var dataToSave = new List<EnemyData>();
+
+        foreach (Enemy enemy in _enemy)
+        {
+            dataToSave.Add(new EnemyData(
+                ObjectDataConvector.TransformToTransformData(enemy.EnemyTransform),
+                ObjectDataConvector.GetSpriteRenderer(enemy.SpriteRendererChange)
+            ));
+        }
+
+        TotalData data = new TotalData(_sliderChanger.slider.value, dataToSave);
+        string json = JsonConvert.SerializeObject(data, Formatting.Indented);
+        File.WriteAllText(jsonPath, json);
+        Debug.Log($"Saved {dataToSave.Count} enemies to {jsonPath}");
     }
     
+    private void LoadDataFromJson()
+    {
+        if (!File.Exists(jsonPath))
+        {
+            Debug.LogWarning("Save file not found: " + jsonPath);
+            return;
+        }
+
+        string json = File.ReadAllText(jsonPath);
+        _totalData = JsonConvert.DeserializeObject<TotalData>(json);
+    
+        for (int i = 0; i < _totalData.Enemies.Count; i++)
+        {
+            Debug.Log($"[{i}] enemy: {_enemy[i]?.name}, " +
+                      $"EnemyTransform: {_enemy[i]?.EnemyTransform}, " +
+                      $"SpriteRendererChange: {_enemy[i]?.SpriteRendererChange}");
+        }
+    
+        for (int i = 0; i < _totalData.Enemies.Count; i++)
+        {
+            ObjectDataConvector.ApplyTransformData(_totalData.Enemies[i].Transform, _enemy[i].EnemyTransform);
+            ObjectDataConvector.ApplySpriteRenderer(_totalData.Enemies[i].Sprite, _enemy[i].SpriteRendererChange);
+        }
+    
+        _slider.value = _totalData.volumeData.Volume;
+    }
+
+    public void Subscribe(Enemy enemy)
+    {
+        _enemy.Add(enemy);
+    }
+
+    public void Subscribe(SliderChanger sliderChanger)
+    {
+        _sliderChanger = sliderChanger;
+    }
+    
+
 }

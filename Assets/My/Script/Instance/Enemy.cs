@@ -12,9 +12,15 @@ public class Enemy : MonoBehaviour
 
     private void Awake()
     {
-        GameManager.instance.LoadData();
+        GameManager.instance.Subscribe(this);
     }
 
+    private void Start()
+    {
+        GameManager.instance.WakeOnLoad();
+    }
+
+    //Я этот Сanvas в the world ШАТАЛ ЧТО КНОПКА НЕ РАБОТАЕТ Я через Scale делал для стабильность но он не работает.😭😭😭
     public void TakeDamage()
     {
         EnemyTransform.position = new Vector3(
@@ -22,7 +28,7 @@ public class Enemy : MonoBehaviour
             Random.Range(teleporterMin.position.y,teleporterMax.position.y), 
             Random.Range(teleporterMin.position.z,teleporterMax.position.z)
             );
-        SpriteRendererChange.color = new  Color(Random.Range(0,255),Random.Range(0,255),Random.Range(0,255),1);
+        SpriteRendererChange.color = new  Color(Random.Range(0,1f),Random.Range(0,1f),Random.Range(0,1f),1);
         GameManager.instance.AudioPlayOneShot(_audioClip,AudioType.SFX);
     }
 }

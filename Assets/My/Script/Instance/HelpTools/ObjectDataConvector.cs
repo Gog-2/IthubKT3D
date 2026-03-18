@@ -4,6 +4,19 @@ public static class ObjectDataConvector
 {
     public static TransformData TransformToTransformData(Transform transform)
     {
+        Vector3 rot = transform.localEulerAngles; 
+        Vector3 pos = transform.position;
+        Vector3 scale = transform.localScale;
+
+        return new TransformData
+        {
+            x_position = pos.x, y_position = pos.y, z_position = pos.z,
+            x_rotation = rot.x, y_rotation = rot.y, z_rotation = rot.z,
+            x_scale = scale.x, y_scale = scale.y, z_scale = scale.z
+        };
+    }
+    public static TransformData TransformToTransformData(RectTransform transform)
+    {
         return new TransformData
         {
             x_position = transform.position.x,
@@ -18,7 +31,7 @@ public static class ObjectDataConvector
         };
     }
 
-    public static void ApplyTransformData(TransformData data, ref Transform target)
+    public static void ApplyTransformData(TransformData data, ref RectTransform target)
     {
         target.position = new Vector3(
             data.x_position,
@@ -38,6 +51,19 @@ public static class ObjectDataConvector
             data.z_scale
         );
     }
+    public static void ApplyTransformData(TransformData data, Transform target)
+    {
+        if (target == null) return;
+
+        target.position = new Vector3(data.x_position, data.y_position, data.z_position);
+        
+        target.localRotation = Quaternion.Euler(data.x_rotation, data.y_rotation, data.z_rotation);
+        
+        float sx = data.x_scale == 0 ? 1 : data.x_scale;
+        float sy = data.y_scale == 0 ? 1 : data.y_scale;
+        float sz = data.z_scale == 0 ? 1 : data.z_scale;
+        target.localScale = new Vector3(sx, sy, sz);
+    }
 
     public static SpriteRenderData GetSpriteRenderer(SpriteRenderer spriteRenderer)
     {
@@ -50,8 +76,13 @@ public static class ObjectDataConvector
         };
     }
 
-    public static void ApplySpriteRenderer(SpriteRenderData data,ref SpriteRenderer spriteRenderer)
+    public static void ApplySpriteRenderer(SpriteRenderData data, SpriteRenderer spriteRenderer)
     {
+        if (spriteRenderer == null)
+        {
+            Debug.LogError("ApplySpriteRenderer: spriteRenderer is null!");
+            return;
+        }
         spriteRenderer.color = new Color(data.r,data.g,data.b,data.a);
     }
 }
