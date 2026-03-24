@@ -167,4 +167,20 @@ public class ManagerInventory : MonoBehaviour
         if (index < 10) return itemPos[1];
         return itemPos[2];
     }
+    public void ClearAll()
+    {
+        List<HolderItem> toDestroy = new List<HolderItem>(_items);
+        foreach (HolderItem item in toDestroy)
+        {
+            if (item != null)
+                item.DestroyThis();
+        }
+        _items.Clear();
+    }
+
+    public void SpawnRandom()
+    {
+        NameOfItems randomItem = (NameOfItems)UnityEngine.Random.Range(0, Enum.GetValues(typeof(NameOfItems)).Length);
+        Spawn(randomItem);
+    }
 }
