@@ -15,6 +15,9 @@ public class Movement3D : MonoBehaviour, ICanBeActiveted
     private Vector3 _velocity;
     private float _coyoteTimeCounter;
     private float _jumpBufferCounter;
+    
+    private Vector3 _initialScale;
+    private Vector3 _crouchScale;
 
     [Header("Setup Components")]
     [SerializeField] private CharacterController _characterController;
@@ -41,6 +44,10 @@ public class Movement3D : MonoBehaviour, ICanBeActiveted
         _playerMovment = new PlayerMovment();
         _targetFOV = _camComponent.fieldOfView;
         _playerMovment.Player.Jump.performed += context => OnJump();
+        _initialScale = transform.localScale;
+        _crouchScale = new Vector3(_initialScale.x, 0.5f, _initialScale.z);
+        _playerMovment.Player.Crouch.performed += context => StartCrouch();
+        _playerMovment.Player.Crouch.canceled += context => StopCrouch();
     }
 
     void Start()
@@ -51,6 +58,8 @@ public class Movement3D : MonoBehaviour, ICanBeActiveted
 
     private void OnEnable() => _playerMovment.Enable();
     private void OnDisable() => _playerMovment.Disable();
+    private void StartCrouch() => transform.localScale = _crouchScale;
+    private void StopCrouch() => transform.localScale = _initialScale;
 
     public void SwitchToPlayerControls()
     {
